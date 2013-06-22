@@ -144,7 +144,7 @@ public class TeleportComponent extends BukkitComponent implements Listener {
                 if (loc.getZ() == loc.getBlockZ()) loc.add(0, 0, 0.5);
                 targets = PlayerUtil.matchPlayers(PlayerUtil.checkPlayer(sender));
                 // check target location (CommandPermissions annotation only checks sender's location)
-                CommandBook.inst().checkPermission(PlayerUtil.checkPlayer(sender), loc.getWorld(), "commandbook.teleport");
+                CommandBook.inst().checkPermission(sender, loc.getWorld(), "commandbook.teleport");
             } else if (args.argsLength() == 2) {
                 targets = PlayerUtil.matchPlayers(sender, args.getString(0));
                 loc = LocationUtil.matchLocation(sender, args.getString(1)); // matches both #4 and #5
@@ -152,7 +152,7 @@ public class TeleportComponent extends BukkitComponent implements Listener {
                 if (loc.getZ() == loc.getBlockZ()) loc.add(0, 0, 0.5);
 
                 // Check permissions!
-                CommandBook.inst().checkPermission(PlayerUtil.checkPlayer(sender), loc.getWorld(), "commandbook.teleport");
+                CommandBook.inst().checkPermission(sender, loc.getWorld(), "commandbook.teleport");
                 for (Player target : targets) {
                     if (target != sender) { // if any of the targets is not the sender, we need to check .other
                         CommandBook.inst().checkPermission(sender, "commandbook.teleport.other");
@@ -165,29 +165,31 @@ public class TeleportComponent extends BukkitComponent implements Listener {
             } else if (args.argsLength() == 3) {
                 // matches #2 - can only be used by a player
                 targets = PlayerUtil.matchPlayers(PlayerUtil.checkPlayer(sender));
-                int x = args.getInteger(1);
-                int y = args.getInteger(2);
-                int z = args.getInteger(3);
+                double x = args.getDouble(0);
+                double y = args.getDouble(1);
+                double z = args.getDouble(2);
                 loc = new Location((PlayerUtil.checkPlayer(sender)).getWorld(), x, y, z);
                 if (loc.getX() == loc.getBlockX()) loc.add(0.5, 0, 0);
                 if (loc.getZ() == loc.getBlockZ()) loc.add(0, 0, 0.5);
                 // check location permission
-                CommandBook.inst().checkPermission(PlayerUtil.checkPlayer(sender), loc.getWorld(), "commandbook.teleport");
+                CommandBook.inst().checkPermission(sender, loc.getWorld(), "commandbook.teleport");
+                CommandBook.inst().checkPermission(sender, loc.getWorld(), "commandbook.locations.coords");
             } else if (args.argsLength() == 4) {
                 targets = PlayerUtil.matchPlayers(sender, args.getString(0)); // matches #1
                 // support relative location (~5 -> current coord + 5)
                 String xArg = args.getString(1);
                 String yArg = args.getString(2);
                 String zArg = args.getString(3);
+                CommandBook.inst().checkPermission(sender, "commandbook.locations.coords");
                 if (xArg.startsWith("~")) relative[0] = true;
                 if (yArg.startsWith("~")) relative[1] = true;
                 if (zArg.startsWith("~")) relative[2] = true;
                 if (relative[0] || relative[1] || relative[2]) {
-                    CommandBook.inst().checkPermission(PlayerUtil.checkPlayer(sender), "commandbook.locations.coords.relative");
+                    CommandBook.inst().checkPermission(sender, "commandbook.locations.coords.relative");
                 }
-                int x = Integer.valueOf(xArg.replace("~", ""));
-                int y = Integer.valueOf(yArg.replace("~", ""));
-                int z = Integer.valueOf(zArg.replace("~", ""));
+                double x = Double.parseDouble(xArg.replace("~", ""));
+                double y = Double.parseDouble(yArg.replace("~", ""));
+                double z = Double.parseDouble(zArg.replace("~", ""));
                 World world;
                 try { // for CommandBlock support
                     world = LegacyBukkitCompat.extractWorld(sender);
@@ -199,7 +201,7 @@ public class TeleportComponent extends BukkitComponent implements Listener {
                     }
                 }
                 loc = new Location(world, x, y, z);
-                CommandBook.inst().checkPermission(PlayerUtil.checkPlayer(sender), loc.getWorld(), "commandbook.teleport");
+                CommandBook.inst().checkPermission(sender, loc.getWorld(), "commandbook.teleport");
                 for (Player target : targets) {
                     if (target != sender) { // if any of the targets is not the sender, we need to check .other
                         CommandBook.inst().checkPermission(sender, "commandbook.teleport.other");
