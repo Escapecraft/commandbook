@@ -86,16 +86,12 @@ public class CommandBookUtil {
         // use mojang's symbols where we can, make new ones up when they are already used
         str = str.replace("`k", ChatColor.MAGIC.toString());
 
-        try {
-            str = str.replace("`l", ChatColor.BOLD.toString());
-            str = str.replace("`m", ChatColor.STRIKETHROUGH.toString());
-            str = str.replace("`n", ChatColor.UNDERLINE.toString());
-            str = str.replace("`o", ChatColor.ITALIC.toString());
+        str = str.replace("`l", ChatColor.BOLD.toString());
+        str = str.replace("`m", ChatColor.STRIKETHROUGH.toString());
+        str = str.replace("`n", ChatColor.UNDERLINE.toString());
+        str = str.replace("`o", ChatColor.ITALIC.toString());
 
-            str = str.replace("`x", ChatColor.RESET.toString());
-        } catch (NoSuchFieldError t) {
-            // Keep this until 1.2.4+ is used on most Bukkit servers
-        }
+        str = str.replace("`x", ChatColor.RESET.toString());
 
         return str;
     }
@@ -174,23 +170,23 @@ public class CommandBookUtil {
      */
     private static String getDirection(double rot) {
         if (0 <= rot && rot < 22.5) {
-            return "North";
-        } else if (22.5 <= rot && rot < 67.5) {
-            return "Northeast";
-        } else if (67.5 <= rot && rot < 112.5) {
-            return "East";
-        } else if (112.5 <= rot && rot < 157.5) {
-            return "Southeast";
-        } else if (157.5 <= rot && rot < 202.5) {
-            return "South";
-        } else if (202.5 <= rot && rot < 247.5) {
-            return "Southwest";
-        } else if (247.5 <= rot && rot < 292.5) {
             return "West";
-        } else if (292.5 <= rot && rot < 337.5) {
+        } else if (22.5 <= rot && rot < 67.5) {
             return "Northwest";
-        } else if (337.5 <= rot && rot < 360.0) {
+        } else if (67.5 <= rot && rot < 112.5) {
             return "North";
+        } else if (112.5 <= rot && rot < 157.5) {
+            return "Northeast";
+        } else if (157.5 <= rot && rot < 202.5) {
+            return "East";
+        } else if (202.5 <= rot && rot < 247.5) {
+            return "Southeast";
+        } else if (247.5 <= rot && rot < 292.5) {
+            return "South";
+        } else if (292.5 <= rot && rot < 337.5) {
+            return "Southwest";
+        } else if (337.5 <= rot && rot < 360.0) {
+            return "West";
         } else {
             return null;
         }

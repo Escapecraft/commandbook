@@ -47,8 +47,21 @@ public class FunComponent extends BukkitComponent {
         registerCommands(Commands.class);
     }
 
-    public LivingEntity spawn(Location loc, EntityType type, String specialType,
-                               CommandContext args, CommandSender sender) throws CommandException {
+    private static <T extends Enum<T>> String valueList(Class<T> clazz) {
+        StringBuilder res = new StringBuilder();
+        boolean first = true;
+        for (Object e : clazz.getEnumConstants()) {
+            if (!first) {
+                res.append(", ");
+            }
+            res.append(e.toString());
+            first = false;
+        }
+        return res.toString();
+    }
+
+    public LivingEntity spawn(Location loc, EntityType type, String specialTypes,
+            CommandContext args, CommandSender sender) throws CommandException {
         Entity spawned = loc.getWorld().spawn(loc, type.getEntityClass());
         if (!(spawned instanceof LivingEntity)) {
             spawned.remove();
@@ -68,78 +81,138 @@ public class FunComponent extends BukkitComponent {
         if (args.hasFlag('b') && creature instanceof Ageable) {
             ((Ageable) creature).setBaby();
         }
-        if (args.hasFlag('t') && creature instanceof Tameable && sender instanceof AnimalTamer) {
-            ((Tameable) creature).setOwner((AnimalTamer) sender);
+        if (args.hasFlag('p')) {
+            creature.setCanPickupItems(true);
+        }
+        /*
+        if (args.hasFlag('i')) {
+            EntityLiving.bJ() // @TODO see about having this exposed to api?
+        }
+         */
+        if (args.hasFlag('t') && creature instanceof Tameable) {
+            if (sender instanceof AnimalTamer) {
+                ((Tameable) creature).setOwner((AnimalTamer) sender);
+            } else {
+                ((Tameable) creature).setTamed(true);
+            }
         }
 
-        if (!specialType.equals("")) {
-            if (creature instanceof Wolf) {
-                if (specialType.contains("angry")) {
-                    ((Wolf) creature).setAngry(true);
-                }
-                if (specialType.contains("sit(ting)?")) {
-                    ((Wolf) creature).setSitting(true);
-                }
-                return creature;
-            } else if (creature instanceof Ocelot) {
-                if (specialType.contains("black")) {
-                    ((Ocelot) creature).setCatType(Ocelot.Type.BLACK_CAT);
-                } else if (specialType.contains("red")) {
-                    ((Ocelot) creature).setCatType(Ocelot.Type.RED_CAT);
-                } else if (specialType.contains("siamese")) {
-                    ((Ocelot) creature).setCatType(Ocelot.Type.SIAMESE_CAT);
-                } // wild is default
-                return creature;
-            } else if (creature instanceof Creeper
-                    && specialType.matches("(power(ed)?|electric|lightning|shock(ed)?)")) {
-                ((Creeper) creature).setPowered(true);
-                return creature;
-            } else if (creature instanceof Sheep) {
-                if (specialType.matches("shear(ed)?")) {
-                    ((Sheep) creature).setSheared(true);
-                    return creature;
-                }
-                ((Sheep) creature).setColor(ItemUtil.matchDyeColor(specialType));
-                return creature;
-            } else if (creature instanceof Pig
-                    && specialType.matches("saddle(d)?")) {
-                ((Pig) creature).setSaddle(true);
-                return creature;
-            } else if (creature instanceof Slime) {
-                ((Slime) creature).setSize(Integer.parseInt(specialType));
-                return creature;
-            } else if (creature instanceof Skeleton) {
-                if (specialType.matches("wither")) {
-                    ((Skeleton) creature).setSkeletonType(Skeleton.SkeletonType.WITHER);
-                    return creature;
-                }
-            } else if (creature instanceof PigZombie) {
-                if (specialType.matches("angry")) {
-                    ((PigZombie) creature).setAngry(true);
-                    return creature;
-                }
-                ((PigZombie) creature).setAnger(Integer.parseInt(specialType));
-                return creature;
-            } else if (creature instanceof Enderman) {
-                ItemStack item = CommandBook.inst().getItem(specialType);
-                if (item == null) return creature;
-               ((Enderman) creature).setCarriedMaterial(item.getData());
-                return creature;
-            } else if (creature instanceof IronGolem
-                    && specialType.matches("(friendly|player(-created)?)")) {
-                ((IronGolem) creature).setPlayerCreated(true);
-            } else if (creature instanceof Villager) {
-                Villager.Profession profession;
-                try {
-                    profession = Villager.Profession.valueOf(specialType.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                   throw new CommandException("Unknown profession '" + specialType + "'");
-                }
+        String[] types = specialTypes.split(",");
 
-                if (profession != null) {
-                    ((Villager) creature).setProfession(profession);
+        if (types.length > 0) {
+            outerloop:
+                for (String specialType : types) {
+                    switch (creature.getType()) {
+                    case WOLF:
+                        if (specialType.matches("(?i)angry")) {
+                            ((Wolf) creature).setAngry(true);
+                        } else if (specialType.matches("(?i)sit(ting)?")) {
+                            ((Wolf) creature).setSitting(true);
+                        }
+                        continue;
+                    case OCELOT:
+                        Ocelot.Type catType;
+                        try {
+                            catType = Ocelot.Type.valueOf(specialType.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            throw new CommandException("Unknown cat type '" + specialType + "'. Allowed values are: "
+                                    + valueList(Ocelot.Type.class));
+                        }
+                        if (catType != null) {
+                            ((Ocelot) creature).setCatType(catType);
+                        }
+                        break outerloop; // only one color
+                    case CREEPER:
+                        if (specialType.matches("(?i)(power(ed)?|electric|lightning|shock(ed)?)")) {
+                            ((Creeper) creature).setPowered(true);
+                        }
+                        break outerloop;
+                    case SHEEP:
+                        if (specialType.matches("(?i)shear(ed)?")) {
+                            ((Sheep) creature).setSheared(true);
+                        } else {
+                            ((Sheep) creature).setColor(ItemUtil.matchDyeColor(specialType));
+                        }
+                        continue;
+                    case PIG:
+                        if (specialType.matches("(?i)saddle(d)?")) {
+                            ((Pig) creature).setSaddle(true);
+                        }
+                        break outerloop;
+                    case SLIME:
+                        ((Slime) creature).setSize(Integer.parseInt(specialType));
+                        break outerloop;
+                    case SKELETON:
+                        if (specialType.matches("(?i)wither")) {
+                            ((Skeleton) creature).setSkeletonType(Skeleton.SkeletonType.WITHER);
+                        }
+                        break outerloop;
+                    case PIG_ZOMBIE:
+                        if (specialType.matches("(?i)angry")) {
+                            ((PigZombie) creature).setAngry(true);
+                            return creature;
+                        } else {
+                            ((PigZombie) creature).setAnger(Integer.parseInt(specialType));
+                        }
+                        break outerloop; // having both would be redundant
+                    case ZOMBIE:
+                        if (specialType.matches("(?i)villager")) {
+                            ((Zombie) creature).setVillager(true);
+                        }
+                        break;
+                    case ENDERMAN:
+                        ItemStack item = CommandBook.inst().getItem(specialType);
+                        if (item == null) return creature;
+                        ((Enderman) creature).setCarriedMaterial(item.getData());
+                        break outerloop; // only one set of hands
+                    case IRON_GOLEM:
+                        if (specialType.matches("(?i)(friendly|player(-created)?)")) {
+                            ((IronGolem) creature).setPlayerCreated(true);
+                        }
+                        break outerloop;
+                    case VILLAGER:
+                        Villager.Profession profession;
+                        try {
+                            profession = Villager.Profession.valueOf(specialType.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            throw new CommandException("Unknown profession '" + specialType + "'. Allowed values are: "
+                                    + valueList(Villager.Profession.class));
+                        }
+                        if (profession != null) {
+                            ((Villager) creature).setProfession(profession);
+                        }
+                        break outerloop; // only one profession
+                    case HORSE:
+                        Horse.Color color = null;
+                        Horse.Style style = null;
+                        Horse.Variant variant = null;
+                        try {
+                            color = Horse.Color.valueOf(specialType.toUpperCase());
+                        } catch (IllegalArgumentException e) {}
+                        if (color != null) {
+                            ((Horse) creature).setColor(color);
+                            continue;
+                        }
+                        try {
+                            style = Horse.Style.valueOf(specialType.toUpperCase());
+                        } catch (IllegalArgumentException e) {}
+                        if (style != null) {
+                            ((Horse) creature).setStyle(style);
+                            continue;
+                        }
+                        try {
+                            variant = Horse.Variant.valueOf(specialType.toUpperCase());
+                        } catch (IllegalArgumentException e) {}
+                        if (variant != null) {
+                            ((Horse) creature).setVariant(variant);
+                            continue;
+                        }
+                        throw new CommandException("Unknown color, style, or variant '" + specialType + "'.");
+                    default:
+                        break outerloop; // can't do anything with this animal, regardless of all the types given
+
+                    }
                 }
-            }
         }
         return creature;
     }
@@ -284,11 +357,11 @@ public class FunComponent extends BukkitComponent {
                     if (count < 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " slapped " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
+                                + " slapped " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
                     } else if (count == 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " slapped more people...");
+                                + " slapped more people...");
                     }
                 }
             }
@@ -346,11 +419,11 @@ public class FunComponent extends BukkitComponent {
                     if (count < 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " rocketed " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
+                                + " rocketed " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
                     } else if (count == 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " rocketed more people...");
+                                + " rocketed more people...");
                     }
                 }
             }
@@ -409,11 +482,11 @@ public class FunComponent extends BukkitComponent {
                     if (count < 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " used BARRAGE on " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
+                                + " used BARRAGE on " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
                     } else if (count == 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " used it on more people...");
+                                + " used it on more people...");
                     }
                 }
             }
@@ -471,11 +544,11 @@ public class FunComponent extends BukkitComponent {
                     if (count < 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " used Fireball attack on " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
+                                + " used Fireball attack on " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
                     } else if (count == 6) {
                         BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
-                                        + " used it on more people...");
+                                + " used it on more people...");
                     }
                 }
             }
@@ -490,7 +563,7 @@ public class FunComponent extends BukkitComponent {
                 usage = "[target]", desc = "Send a ball of fire to a face", flags = "s",
                 min = 0, max = 1)
         @CommandPermissions({"commandbook.cannon"})
-       public void cannon(CommandContext args, CommandSender sender) throws CommandException {
+        public void cannon(CommandContext args, CommandSender sender) throws CommandException {
 
             Iterable<Player> targets = null;
             boolean included = false;
@@ -533,11 +606,11 @@ public class FunComponent extends BukkitComponent {
                     }
                 } else {
                     if (count < 6) {
-                    	BasePlugin.server().broadcastMessage(
+                        BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
                                 + " used Fireball attack on " + PlayerUtil.toColoredName(player, ChatColor.YELLOW));
                     } else if (count == 6) {
-                    	BasePlugin.server().broadcastMessage(
+                        BasePlugin.server().broadcastMessage(
                                 ChatColor.YELLOW + PlayerUtil.toColoredName(sender, ChatColor.YELLOW)
                                 + " used it more people...");
                     }
